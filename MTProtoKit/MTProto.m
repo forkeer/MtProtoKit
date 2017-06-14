@@ -53,6 +53,8 @@
 #import "MTNewSessionCreatedMessage.h"
 #import "MTPongMessage.h"
 
+#import "MTApiEnvironment.h"
+
 #import "MTTime.h"
 
 #define MTProtoV2 1
@@ -118,6 +120,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         _context = context;
         _datacenterId = datacenterId;
         _usageCalculationInfo = usageCalculationInfo;
+        _apiEnvironment = context.apiEnvironment;
         
         [_context addChangeListener:self];
         
@@ -2278,6 +2281,25 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         for (id<MTMessageService> service in _messageServices) {
             if ([service respondsToSelector:@selector(mtProtoPublicKeysUpdated:datacenterId:publicKeys:)]) {
                 [service mtProtoPublicKeysUpdated:self datacenterId:datacenterId publicKeys:publicKeys];
+            }
+        }
+    }];
+}
+    
+- (void)contextApiEnvironmentUpdated:(MTContext *)context apiEnvironment:(MTApiEnvironment *)apiEnvironment {
+    [[MTProto managerQueue] dispatchOnQueue:^{
+        MTSocksProxySettings *previousSocksProxySettings = _apiEnvironment.socksProxySettings;
+        
+        _apiEnvironment = apiEnvironment;
+        
+        if ((_apiEnvironment.socksProxySettings != nil) != (previousSocksProxySettings != nil) || (previousSocksProxySettings != nil && ![_apiEnvironment.socksProxySettings isEqual:previousSocksProxySettings])) {
+            [self resetTransport];
+            [self requestTransportTransaction];
+        }
+        
+        for (id<MTMessageService> service in _messageServices) {
+            if ([service respondsToSelector:@selector(mtProtoApiEnvironmentUpdated:apiEnvironment:)]) {
+                [service mtProtoApiEnvironmentUpdated:self apiEnvironment:apiEnvironment];
             }
         }
     }];

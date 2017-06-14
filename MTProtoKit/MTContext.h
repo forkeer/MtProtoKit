@@ -30,6 +30,7 @@
 - (void)contextIsPasswordRequiredUpdated:(MTContext *)context datacenterId:(NSInteger)datacenterId;
 - (void)contextDatacenterPublicKeysUpdated:(MTContext *)context datacenterId:(NSInteger)datacenterId publicKeys:(NSArray<NSDictionary *> *)publicKeys;
 - (MTSignal *)fetchContextDatacenterPublicKeys:(MTContext *)context datacenterId:(NSInteger)datacenterId;
+- (void)contextApiEnvironmentUpdated:(MTContext *)context apiEnvironment:(MTApiEnvironment *)apiEnvironment;
 
 @end
 
@@ -53,6 +54,8 @@
 
 - (void)addChangeListener:(id<MTContextChangeListener>)changeListener;
 - (void)removeChangeListener:(id<MTContextChangeListener>)changeListener;
+
+- (void)setDiscoverBackupAddressListSignal:(MTSignal *)signal;
 
 - (NSTimeInterval)globalTime;
 - (NSTimeInterval)globalTimeDifference;
@@ -95,5 +98,7 @@
 - (void)authTokenForDatacenterWithIdRequired:(NSInteger)datacenterId authToken:(id)authToken masterDatacenterId:(NSInteger)masterDatacenterId;
 
 - (void)reportProblemsWithDatacenterAddressForId:(NSInteger)datacenterId address:(MTDatacenterAddress *)address;
+    
+- (void)updateApiEnvironment:(MTApiEnvironment *(^)(MTApiEnvironment *))f;
 
 @end
