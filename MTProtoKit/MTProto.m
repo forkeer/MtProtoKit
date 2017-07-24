@@ -73,6 +73,19 @@ static const NSUInteger MTMaxContainerSize = 3 * 1024;
 static const NSUInteger MTMaxUnacknowledgedMessageSize = 1 * 1024 * 1024;
 static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
 
+@implementation MTProtoConnectionState
+
+- (instancetype)initWithIsConnected:(bool)isConnected isUsingProxy:(bool)isUsingProxy {
+    self = [super init];
+    if (self != nil) {
+        _isConnected = isConnected;
+        _isUsingProxy = isUsingProxy;
+    }
+    return self;
+}
+
+@end
+
 @interface MTProto () <MTContextChangeListener, MTTransportDelegate, MTTimeSyncMessageServiceDelegate, MTResendMessageServiceDelegate>
 {
     NSMutableArray *_messageServices;
@@ -219,7 +232,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             if ([delegate respondsToSelector:@selector(mtProtoNetworkAvailabilityChanged:isNetworkAvailable:)])
                 [delegate mtProtoNetworkAvailabilityChanged:self isNetworkAvailable:false];
             if ([delegate respondsToSelector:@selector(mtProtoConnectionStateChanged:isConnected:)])
-                [delegate mtProtoConnectionStateChanged:self isConnected:false];
+                [delegate mtProtoConnectionStateChanged:self state:nil];
             if ([delegate respondsToSelector:@selector(mtProtoConnectionContextUpdateStateChanged:isUpdatingConnectionContext:)])
                 [delegate mtProtoConnectionContextUpdateStateChanged:self isUpdatingConnectionContext:false];
         }
@@ -271,7 +284,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             [self setTransport:nil];
         }
         
-        _transportScheme = [_context transportSchemeForDatacenterWithid:_datacenterId media:_media];
+        _transportScheme = [_context transportSchemeForDatacenterWithId:_datacenterId media:_media isProxy:_apiEnvironment.socksProxySettings != nil];
         
         if (_transportScheme == nil)
         {
@@ -662,7 +675,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     }];
 }
 
-- (void)transportConnectionStateChanged:(MTTransport *)transport isConnected:(bool)isConnected
+- (void)transportConnectionStateChanged:(MTTransport *)transport isConnected:(bool)isConnected isUsingProxy:(bool)isUsingProxy
 {
     [[MTProto managerQueue] dispatchOnQueue:^
     {
@@ -680,8 +693,8 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         }
         
         id<MTProtoDelegate> delegate = _delegate;
-        if ([delegate respondsToSelector:@selector(mtProtoConnectionStateChanged:isConnected:)])
-            [delegate mtProtoConnectionStateChanged:self isConnected:isConnected];
+        if ([delegate respondsToSelector:@selector(mtProtoConnectionStateChanged:state:)])
+            [delegate mtProtoConnectionStateChanged:self state:[[MTProtoConnectionState alloc] initWithIsConnected:isConnected isUsingProxy:isUsingProxy]];
     }];
 }
 
@@ -2302,6 +2315,8 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                 [service mtProtoApiEnvironmentUpdated:self apiEnvironment:apiEnvironment];
             }
         }
+        
+        //[self resetTransport];
     }];
 }
 
